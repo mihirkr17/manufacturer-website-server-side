@@ -55,7 +55,16 @@ async function run() {
       }
 
 
-      // checking admin or normal users
+      // checking admin role
+      app.get('/admin/:email', async (req, res) => {
+         const email = req.params.email;
+         const user = await usersCollection.findOne({ email: email });
+         const isAdmin = user.role === 'admin';
+         res.send({ admin: isAdmin })
+       })
+
+
+      // Set user into database with authentication
       app.put('/user/:email', async (req, res) => {
          const email = req.params.email;
          const user = req.body;
@@ -73,6 +82,16 @@ async function run() {
       app.get('/products', async (req, res) => {
          const cursor = await productCollection.find({}).toArray();
          res.send(cursor);
+      });
+
+      // Fetch single product
+      app.get('/products/:id', async(req, res) => {
+         const id = req.params.id;
+         const query = {
+            _id: ObjectId(id)
+         }
+         const result = await productCollection.findOne(query);
+         res.send(result);
       });
 
    } finally {
