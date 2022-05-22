@@ -56,7 +56,7 @@ async function run() {
 
 
       // checking admin or normal users
-      app.put('/user/:email', verifyJWT, async (req, res) => {
+      app.put('/user/:email', async (req, res) => {
          const email = req.params.email;
          const user = req.body;
          const filter = { email: email };
@@ -65,8 +65,8 @@ async function run() {
             $set: user,
          };
          const result = await usersCollection.updateOne(filter, updateDoc, options);
-         const accessToken = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-         res.send({ result, accessToken });
+         const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+         res.send({ result, token });
       });
 
       // fetch all the products
