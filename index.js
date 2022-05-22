@@ -65,8 +65,8 @@ async function run() {
             $set: user,
          };
          const result = await usersCollection.updateOne(filter, updateDoc, options);
-         const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-         res.send({ result, token });
+         const accessToken = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+         res.send({ result, accessToken });
       });
 
       // fetch all the products
