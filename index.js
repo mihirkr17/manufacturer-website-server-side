@@ -62,7 +62,18 @@ async function run() {
          const user = await usersCollection.findOne({ email: email });
          const isAdmin = user.role === 'admin';
          res.send({ admin: isAdmin })
-      })
+      });
+
+      // set admin
+      app.put('/user/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+         const email = req.params.email;
+         const filter = { email: email };
+         const setRole = {
+           $set: { role: 'admin' },
+         };
+         const result = await usersCollection.updateOne(filter, setRole);
+         res.send(result);
+       })
 
 
       // Set user into database with authentication
@@ -87,6 +98,12 @@ async function run() {
          res.send(result);
       });
 
+      // fetch all the users list
+      app.get('/users', async (req, res) => {
+         const result = (await usersCollection.find({}).toArray()).reverse();
+         res.send(result);
+      });
+
       // fetch all the products
       app.get('/products', async (req, res) => {
          const cursor = await productCollection.find({}).toArray();
@@ -104,29 +121,29 @@ async function run() {
       });
 
       // Add review
-      app.post('/reviews', async(req, res) => {
+      app.post('/reviews', async (req, res) => {
          const data = req.body;
          const result = await reviewsCollection.insertOne(data);
          res.send(result);
       });
 
-       // fetch all review
-       app.get('/reviews', async(req, res) => {
+      // fetch all review
+      app.get('/reviews', async (req, res) => {
          const result = await reviewsCollection.find({}).toArray();
          res.send(result);
       });
 
-      // fetch review by particular user
-      app.get('/review/:email', async(req, res) => {
+      // fetch review by one particular user
+      app.get('/review/:email', async (req, res) => {
          const email = req.params.email;
-         const result = await reviewsCollection.find({email: email}).toArray();
+         const result = (await reviewsCollection.find({ email: email }).toArray()).reverse();
          res.send(result);
       });
 
       // fetch review by particular user
-      app.delete('/review/:id', async(req, res) => {
+      app.delete('/review/:id', async (req, res) => {
          const id = req.params.id;
-         const result = await reviewsCollection.deleteOne({_id: ObjectId(id)});
+         const result = await reviewsCollection.deleteOne({ _id: ObjectId(id) });
          res.send(result);
       });
 
