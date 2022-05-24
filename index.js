@@ -42,6 +42,7 @@ async function run() {
       const productCollection = client.db('manufacture').collection('products');
       const usersCollection = client.db('manufacture').collection('users');
       const reviewsCollection = client.db('manufacture').collection('reviews');
+      const ordersCollection = client.db('manufacture').collection('orders');
 
       // verify admin function to check user role
       const verifyAdmin = async (req, res, next) => {
@@ -70,11 +71,11 @@ async function run() {
          const filter = { email: email };
          const option = { upsert: true };
          const setRole = {
-           $set: { role: 'admin' },
+            $set: { role: 'admin' },
          };
          const result = await usersCollection.updateOne(filter, setRole, option);
          res.send(result);
-       })
+      })
 
 
       // Set user into database with authentication
@@ -121,6 +122,24 @@ async function run() {
          res.send(result);
       });
 
+      // update single product
+      //  app.put('/product/:id', async (req, res) => {
+      //    const id = req.params.id;
+      //    const data = req.body;
+      //    console.log(id);
+      //    const option = {
+      //       upsert : true
+      //    }
+      //    const query = {
+      //       _id: ObjectId(id)
+      //    }
+      //    const updateProduct = {
+      //       $set: {quantity: data},
+      //    };
+      //    const result = await productCollection.updateOne(query, updateProduct, option);
+      //    res.send(result);
+      // });
+
       // Add review
       app.post('/reviews', async (req, res) => {
          const data = req.body;
@@ -145,6 +164,43 @@ async function run() {
       app.delete('/review/:id', async (req, res) => {
          const id = req.params.id;
          const result = await reviewsCollection.deleteOne({ _id: ObjectId(id) });
+         res.send(result);
+      });
+
+      // make order for user
+      app.post('/orders/:id', async (req, res) => {
+         const id = req.params.id;
+         const data = req.body;
+         const orderResult = await ordersCollection.insertOne(data);
+
+         const option = {
+            upsert: true
+         }
+         const query = {
+            _id: ObjectId(id)
+         }
+         const updateProduct = {
+            $set: { quantity: data?.orderInformation?.available_quantity },
+         };
+
+         const updateProductResult = await productCollection.updateOne(query, updateProduct, option);
+         res.send({ orderResult, updateProductResult });
+      });
+
+      // fetch orders in my order page
+      app.get('/my-orders/:email', async (req, res) => {
+         const email = req.params.email;
+         const filter = {
+            'userInformation.email': email
+         }
+         const result = await ordersCollection.find(filter).toArray();
+         res.send(result);
+      });
+
+      // delete or cancel order from my-order
+      app.delete('/delete-my-order/:orderId', async (req, res) => {
+         const orderId = req.params.orderId;
+         const result = await ordersCollection.deleteOne({_id: ObjectId(orderId)});
          res.send(result);
       });
 
