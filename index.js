@@ -4,6 +4,7 @@ require('dotenv').config();
 const cors = require('cors');
 const app = express();
 const jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.STRIPE_ST);
 
 
 // use middleware 
@@ -55,6 +56,22 @@ async function run() {
             res.status(403).send({ message: 'Forbidden' });
          }
       }
+
+      // payment intent
+      app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+         const { total_price } = req.body;
+         let amount = parseInt(total_price) * 100;
+         // Create a PaymentIntent with the order amount and currency
+         const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount,
+            currency: "usd",
+            payment_method_types: ['card']
+         });
+
+         res.send({
+            clientSecret: paymentIntent.client_secret,
+         });
+      });
 
 
       // checking admin role
@@ -173,25 +190,33 @@ async function run() {
          const data = req.body;
          const orderResult = await ordersCollection.insertOne(data);
 
-         const option = {
-            upsert: true
-         }
-         const query = {
-            _id: ObjectId(id)
-         }
-         const updateProduct = {
-            $set: { quantity: data?.orderInformation?.available_quantity },
-         };
+         // const option = {
+         //    upsert: true
+         // }
+         // const query = {
+         //    _id: ObjectId(id)
+         // }
+         // const findProductQuantity = await productCollection.findOne(query);
+         // const quantity = parseInt(findProductQuantity?.quantity) - parseInt(data?.orderInformation?.order_quantity);
+         // let availability;
+         // if (quantity === 0) {
+         //    availability = 'Out Of Stock';
+         // } else {
+         //    availability = 'In stock!';
+         // }
+         // const updateProduct = {
+         //    $set: { quantity: quantity, availability: availability }
+         // };
 
-         const updateProductResult = await productCollection.updateOne(query, updateProduct, option);
-         res.send({ orderResult, updateProductResult });
+         // const updateProductResult = await productCollection.updateOne(query, updateProduct, option);
+         res.send(orderResult);
       });
 
       // fetch orders in my order page
       app.get('/my-orders/:email', async (req, res) => {
          const email = req.params.email;
          const filter = {
-            'userInformation.email': email
+            email: email
          }
          const result = await ordersCollection.find(filter).toArray();
          res.send(result);
@@ -200,9 +225,36 @@ async function run() {
       // delete or cancel order from my-order
       app.delete('/delete-my-order/:orderId', async (req, res) => {
          const orderId = req.params.orderId;
-         const result = await ordersCollection.deleteOne({_id: ObjectId(orderId)});
+         // const product_id = req.params.productId;
+         // const order_quantity = req.params.orderQuantity;
+         // const option = { upsert: true };
+         // const filterProduct = { _id: ObjectId(product_id) }
+
+         // const findProductQuantity = await productCollection.findOne(filterProduct);
+         // let productQuantity = findProductQuantity?.quantity;
+         // const quantity = parseInt(productQuantity) + parseInt(order_quantity);
+         // const updateProductQuantity = {
+         //    $set: {
+         //       quantity: quantity
+         //    }
+         // }
+         // await productCollection.updateOne(filterProduct, updateProductQuantity, option)
+         const result = await ordersCollection.deleteOne({ _id: ObjectId(orderId) });
          res.send(result);
       });
+
+      // all orders for admin role
+      app.get('/all-orders', async (req, res) => {
+         const result = await ordersCollection.find({}).toArray();
+         res.send(result);
+      });
+
+      // specific order
+      app.get('/order/:id', async (req, res) => {
+         const id = req.params.id;
+         const result = await ordersCollection.findOne({_id : ObjectId(id)});
+         res.send(result);
+      })
 
    } finally {
 
