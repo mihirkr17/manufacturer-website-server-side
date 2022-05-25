@@ -252,9 +252,25 @@ async function run() {
       // specific order
       app.get('/order/:id', async (req, res) => {
          const id = req.params.id;
-         const result = await ordersCollection.findOne({_id : ObjectId(id)});
+         const result = await ordersCollection.findOne({ _id: ObjectId(id) });
          res.send(result);
       })
+
+      // success payment order
+      app.put('/order-payment/:orderId', async (req, res) => {
+         const orderId = req.params.orderId;
+         const { TxId } = req.body;
+         const filterOrderQuery = { _id: ObjectId(orderId) }
+         const option = { upsert: true };
+         const updateContent = {
+            $set: {
+               payment: 'paid',
+               TxId: TxId
+            }
+         }
+         const result = await ordersCollection.updateOne(filterOrderQuery, updateContent, option)
+         res.send(result);
+      });
 
    } finally {
 
