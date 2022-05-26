@@ -45,6 +45,14 @@ async function run() {
       const reviewsCollection = client.db('manufacture').collection('reviews');
       const ordersCollection = client.db('manufacture').collection('orders');
 
+      // portfolio collection
+      const infoCollection = client.db('portfolio').collection('information');
+      const projectCollection = client.db('portfolio').collection('projects');
+
+      // blog collection
+      const blogCollection = client.db('blogs').collection('blog');
+
+
       // verify admin function to check user role
       const verifyAdmin = async (req, res, next) => {
          const requester = req.decoded.email;
@@ -189,27 +197,38 @@ async function run() {
          const id = req.params.id;
          const data = req.body;
          const orderResult = await ordersCollection.insertOne(data);
-
-         // const option = {
-         //    upsert: true
-         // }
-         // const query = {
-         //    _id: ObjectId(id)
-         // }
-         // const findProductQuantity = await productCollection.findOne(query);
-         // const quantity = parseInt(findProductQuantity?.quantity) - parseInt(data?.orderInformation?.order_quantity);
-         // let availability;
-         // if (quantity === 0) {
-         //    availability = 'Out Of Stock';
-         // } else {
-         //    availability = 'In stock!';
-         // }
-         // const updateProduct = {
-         //    $set: { quantity: quantity, availability: availability }
-         // };
-
-         // const updateProductResult = await productCollection.updateOne(query, updateProduct, option);
          res.send(orderResult);
+      });
+
+      // update product quantity and order status
+      app.put('/order-confirm/:orderId', async (req, res) => {
+         const orderId = req.params.orderId;
+         const { product_id, order_quantity } = req.body;
+         const option = { upsert: true };
+         const orderFilter = { _id: ObjectId(orderId) };
+         const upOrder = {
+            $set: {
+               status: "delivered"
+            }
+         }
+         const updateOrder = await ordersCollection.updateOne(orderFilter, upOrder, option);
+         // changing product quantity
+         const productFilter = { _id: ObjectId(product_id) };
+         const product = await productCollection.findOne(productFilter);
+         const productQuantity = parseInt(product?.quantity);
+         const quantity = productQuantity - parseInt(order_quantity);
+         let availability;
+         if (quantity === 0) {
+            availability = 'Out Of Stock';
+         } else {
+            availability = 'In stock!';
+         }
+         const upProduct = {
+            $set: { quantity: quantity, availability: availability }
+         };
+         const updateProduct = await productCollection.updateOne(productFilter, upProduct, option);
+
+         res.send({ updateOrder, updateProduct });
       });
 
       // fetch orders in my order page
@@ -225,20 +244,6 @@ async function run() {
       // delete or cancel order from my-order
       app.delete('/delete-my-order/:orderId', async (req, res) => {
          const orderId = req.params.orderId;
-         // const product_id = req.params.productId;
-         // const order_quantity = req.params.orderQuantity;
-         // const option = { upsert: true };
-         // const filterProduct = { _id: ObjectId(product_id) }
-
-         // const findProductQuantity = await productCollection.findOne(filterProduct);
-         // let productQuantity = findProductQuantity?.quantity;
-         // const quantity = parseInt(productQuantity) + parseInt(order_quantity);
-         // const updateProductQuantity = {
-         //    $set: {
-         //       quantity: quantity
-         //    }
-         // }
-         // await productCollection.updateOne(filterProduct, updateProductQuantity, option)
          const result = await ordersCollection.deleteOne({ _id: ObjectId(orderId) });
          res.send(result);
       });
@@ -271,6 +276,16 @@ async function run() {
          const result = await ordersCollection.updateOne(filterOrderQuery, updateContent, option)
          res.send(result);
       });
+
+
+      // Portfolio Api
+      app.get('/information', async (req, res) => {
+         res.send(await infoCollection.findOne({}));
+      });
+
+      app.get('/my-project', async (req, res) => {
+         res.send(await projectCollection.find({}).toArray());
+      })
 
    } finally {
 
