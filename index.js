@@ -147,25 +147,34 @@ async function run() {
          res.send(result);
       });
 
-      // update single product
-      //  app.put('/product/:id', async (req, res) => {
-      //    const id = req.params.id;
-      //    const data = req.body;
-      //    console.log(id);
-      //    const option = {
-      //       upsert : true
-      //    }
-      //    const query = {
-      //       _id: ObjectId(id)
-      //    }
-      //    const updateProduct = {
-      //       $set: {quantity: data},
-      //    };
-      //    const result = await productCollection.updateOne(query, updateProduct, option);
-      //    res.send(result);
-      // });
+      // insert product
+      app.post('/product/', async (req, res) => {
+         const body = req.body;
+         const result = await productCollection.insertOne(body);
+         res.send(result);
+      });
 
-      // Add review
+      // update product by product id api
+      app.put('/product-update/:id', async (req, res) => {
+         const id = req.params.id;
+         const body = req.body;
+         const filterProduct = { _id: ObjectId(id) };
+         const option = { upsert: true };
+         const data = {
+            $set: body
+         }
+         const result = await productCollection.updateOne(filterProduct, data, option);
+         res.send(result);
+      });
+
+      // delete product api
+      app.delete('/delete-product/:id', async (req, res) => {
+         const id = req.params.id;
+         const filterProduct = { _id: ObjectId(id) };
+         res.send(await productCollection.deleteOne(filterProduct));
+      });
+
+      // Add review api
       app.post('/reviews', async (req, res) => {
          const data = req.body;
          const result = await reviewsCollection.insertOne(data);
@@ -208,7 +217,7 @@ async function run() {
          const orderFilter = { _id: ObjectId(orderId) };
          const upOrder = {
             $set: {
-               status: "delivered"
+               status: "shipped"
             }
          }
          const updateOrder = await ordersCollection.updateOne(orderFilter, upOrder, option);
@@ -218,7 +227,7 @@ async function run() {
          const productQuantity = parseInt(product?.quantity);
          const quantity = productQuantity - parseInt(order_quantity);
          let availability;
-         if (quantity === 0) {
+         if (quantity < parseInt(product?.min_order_quantity)) {
             availability = 'Out Of Stock';
          } else {
             availability = 'In stock!';
@@ -277,12 +286,11 @@ async function run() {
          res.send(result);
       });
 
-
       // Portfolio Api
       app.get('/information', async (req, res) => {
          res.send(await infoCollection.findOne({}));
       });
-
+      // fetch all project
       app.get('/my-project', async (req, res) => {
          res.send(await projectCollection.find({}).toArray());
       })
@@ -292,8 +300,6 @@ async function run() {
    }
 }
 run().catch(console.dir());
-
-
 
 app.get('/', (req, res) => {
    res.send('Manufacture Site Running');
