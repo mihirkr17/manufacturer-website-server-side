@@ -295,6 +295,11 @@ async function run() {
          res.send(await projectCollection.find({}).toArray());
       })
 
+      // fetch blog
+      app.get('/blogs', async (req, res) => {
+         res.send(await blogCollection.find({}).toArray());
+      } )
+
    } finally {
 
    }
